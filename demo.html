@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Senhas - Demo</title>
+</head>
+<body>
+    <h1>🔐 Gerador de Senhas</h1>
+    <p>Crie senhas seguras e personalizadas</p>
+    <hr>
+
+    <h2>Configurações</h2>
+    
+    <div>
+        <label for="length">Comprimento da Senha: <span id="lengthValue">12</span></label><br>
+        <input type="range" id="length" min="4" max="50" value="12">
+    </div>
+    <br>
+
+    <div>
+        <h3>Caracteres a incluir:</h3>
+        <label>
+            <input type="checkbox" id="uppercase" checked>
+            Maiúsculas (A-Z)
+        </label><br>
+        
+        <label>
+            <input type="checkbox" id="lowercase" checked>
+            Minúsculas (a-z)
+        </label><br>
+        
+        <label>
+            <input type="checkbox" id="numbers" checked>
+            Números (0-9)
+        </label><br>
+        
+        <label>
+            <input type="checkbox" id="symbols" checked>
+            Símbolos (!@#$%)
+        </label><br>
+        <br>
+        
+        <label>
+            <input type="checkbox" id="excludeSimilar">
+            Excluir similares (0,O,l,1)
+        </label><br>
+        
+        <label>
+            <input type="checkbox" id="excludeAmbiguous">
+            Excluir ambíguos ({[]()})
+        </label>
+    </div>
+    <br>
+
+    <button onclick="generatePassword()">🎲 Gerar Nova Senha</button>
+    <hr>
+
+    <h2>Senha Gerada</h2>
+    <input type="text" id="passwordField" readonly size="50" placeholder="Sua senha aparecerá aqui..."><br><br>
+    <button onclick="copyPassword()">📋 Copiar Senha</button>
+    <br><br>
+
+    <div>
+        <strong>Força da Senha:</strong> <span id="strengthText">-</span><br>
+        <progress id="strengthBar" value="0" max="100"></progress>
+    </div>
+    <hr>
+
+    <h2>📝 Últimas Senhas Geradas</h2>
+    <div id="historyList">
+        <p><em>Nenhuma senha gerada ainda</em></p>
+    </div>
+    <button onclick="clearHistory()">🗑️ Limpar Histórico</button>
+    <hr>
+
+    <h2>💡 Dicas de Segurança</h2>
+    <ul>
+        <li>Use senhas diferentes para cada conta importante</li>
+        <li>Senhas com 12+ caracteres são mais seguras</li>
+        <li>Combine letras, números e símbolos</li>
+        <li>Evite informações pessoais óbvias</li>
+        <li>Use um gerenciador de senhas confiável</li>
+        <li>Ative autenticação de dois fatores quando possível</li>
+    </ul>
+
+    <script>
+        let history = [];
+
+        // Atualizar display do comprimento
+        document.getElementById('length').addEventListener('input', function(e) {
+            document.getElementById('lengthValue').textContent = e.target.value;
+        });
+
+        function getCharacterSets() {
+            const sets = {
+                uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                lowercase: 'abcdefghijklmnopqrstuvwxyz',
+                numbers: '0123456789',
+                symbols: '!@#$%^&*()_+-=[]{}|;:,.<>?'
+            };
+
+            const similar = '0O1lI';
+            const ambiguous = '{}[]()\/\\\'"`~,;.<>';
+
+            if (document.getElementById('excludeSimilar').checked) {
+                Object.keys(sets).forEach(key => {
+                    sets[key] = sets[key].split('').filter(char => !similar.includes(char)).join('');
+                });
+            }
+
+            if (document.getElementById('excludeAmbiguous').checked) {
+                Object.keys(sets).forEach(key => {
+                    sets[key] = sets[key].split('').filter(char => !ambiguous.includes(char)).join('');
+                });
+            }
+
+            return sets;
+        }
+
+        function getRandomChar(str) {
+            return str[Math.floor(Math.random() * str.length)];
+        }
+
+        function shuffleString(str) {
+            return str.split('').sort(() => Math.random() - 0.5).join('');
+        }
+
+        function generatePassword() {
+            const length = parseInt(document.getElementById('length').value);
+            const sets = getCharacterSets();
+            
+            let availableChars = '';
+            let requiredChars = '';
+
+            if (document.getElementById('uppercase').checked) {
+                availableChars += sets.uppercase;
+                requiredChars += getRandomChar(sets.uppercase);
+            }
+            if (document.getElementById('lowercase').checked) {
+                availableChars += sets.lowercase;
+                requiredChars += getRandomChar(sets.lowercase);
+            }
+            if (document.getElementById('numbers').checked) {
+                availableChars += sets.numbers;
+                requiredChars += getRandomChar(sets.numbers);
+            }
+            if (document.getElementById('symbols').checked) {
+                availableChars += sets.symbols;
+                requiredChars += getRandomChar(sets.symbols);
+            }
+
+            if (availableChars === '') {
+                alert('Selecione pelo menos um tipo de caractere!');
+                return;
+            }
+
+            let password = requiredChars;
+            
+            for (let i = requiredChars.length; i < length; i++) {
+                password += getRandomChar(availableChars);
+            }
+
+            password = shuffleString(password);
+
+            document.getElementById('passwordField').value = password;
+            updateStrengthMeter(password);
+            addToHistory(password);
+        }
+
+        function calculateStrength(password) {
+            let strength = 0;
+            
+            strength += Math.min(password.length * 2, 25);
+            
+            if (/[a-z]/.test(password)) strength += 10;
+            if (/[A-Z]/.test(password)) strength += 10;
+            if (/[0-9]/.test(password)) strength += 10;
+            if (/[^A-Za-z0-9]/.test(password)) strength += 15;
+            
+            if (password.length >= 12) strength += 10;
+            if (password.length >= 16) strength += 10;
+            if (password.length >= 20) strength += 10;
+            
+            const uniqueChars = new Set(password).size;
+            if (uniqueChars < password.length * 0.7) strength -= 10;
+            
+            return Math.min(strength, 100);
+        }
+
+        function updateStrengthMeter(password) {
+            const strength = calculateStrength(password);
+            const strengthBar = document.getElementById('strengthBar');
+            const strengthText = document.getElementById('strengthText');
+
+            strengthBar.value = strength;
+            
+            if (strength < 30) {
+                strengthText.textContent = '🔴 Fraca';
+            } else if (strength < 50) {
+                strengthText.textContent = '🟠 Média';
+            } else if (strength < 70) {
+                strengthText.textContent = '🟢 Forte';
+            } else {
+                strengthText.textContent = '🟢 Muito Forte';
+            }
+        }
+
+        function copyPassword() {
+            const passwordField = document.getElementById('passwordField');
+            
+            if (passwordField.value === '') {
+                alert('Gere uma senha primeiro!');
+                return;
+            }
+            
+            passwordField.select();
+            document.execCommand('copy');
+            
+            alert('✅ Senha copiada para a área de transferência!');
+        }
+
+        function addToHistory(password) {
+            const timestamp = new Date().toLocaleString('pt-BR');
+            history.unshift({ password, timestamp });
+            
+            if (history.length > 5) {
+                history = history.slice(0, 5);
+            }
+            
+            updateHistoryDisplay();
+        }
+
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<p><em>Nenhuma senha gerada ainda</em></p>';
+                return;
+            }
+            
+            historyList.innerHTML = history.map(item => `
+                <div style="border: 1px solid #ccc; padding: 10px; margin: 5px 0; background: #f9f9f9;">
+                    <strong>${item.password}</strong><br>
+                    <small>${item.timestamp}</small>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            if (confirm('Tem certeza que deseja limpar o histórico?')) {
+                history = [];
+                updateHistoryDisplay();
+            }
+        }
+
+        // Gerar senha inicial ao carregar a página
+        window.addEventListener('load', function() {
+            generatePassword();
+        });
+    </script>
+</body>
+</html>
