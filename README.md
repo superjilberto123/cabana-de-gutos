@@ -1,2 +1,2 @@
 # cabana-de-gutos
-manda salve gutao ✌️
+versões do jogo feiticeiro
