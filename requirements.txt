@@ -1,4 +1,14 @@
 flask==3.0.0
-requests==2.31.0
-pandas==2.1.0
-python-dotenv==1.0.0
+gunicorn==21.2.0
+# outras dependências...
+```
+
+**Procfile** (crie este arquivo - importante!):
+```
+web: gunicorn app:app
+```
+*Substitua `app:app` por `seu_arquivo:nome_da_variavel_flask`*
+
+**runtime.txt** (opcional, mas recomendado):
+```
+python-3.11.0
